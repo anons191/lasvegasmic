@@ -48,16 +48,15 @@ const userSchema = new mongoose.Schema({
     ref: 'Event'
   }],
   // For Comedian users - events they're performing at
-  performanceSlots: [{
-    event: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Event'
-    },
-    slot: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'TimeSlot'
-    }
-  }],
+  performanceSlots: {
+    type: [
+      {
+        event: { type: mongoose.Schema.Types.ObjectId, ref: 'Event' },
+        slot: { type: mongoose.Schema.Types.ObjectId, ref: 'TimeSlot' }
+      }
+    ],
+    default: []
+  },
   // For Host users - events they've created
   eventsHosting: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -109,6 +108,10 @@ userSchema.pre('save', async function(next) {
     next(error);
   }
 });
+
+// Set virtuals and refs to be included in JSON and Object output
+userSchema.set('toJSON', { virtuals: true });
+userSchema.set('toObject', { virtuals: true });
 
 const User = mongoose.model('User', userSchema);
 

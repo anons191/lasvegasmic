@@ -119,17 +119,17 @@ eventSchema.index({ location: '2dsphere' });
 
 // Virtual for getting total attendees count
 eventSchema.virtual('attendeeCount').get(function() {
-  return this.attendees.length;
+  return (this.attendees || []).length;
 });
 
 // Virtual for getting number of comedians booked
 eventSchema.virtual('comedianCount').get(function() {
-  return this.timeSlots.filter(slot => slot.isTaken).length;
+  return (this.timeSlots || []).filter(slot => slot.isTaken).length;
 });
 
 // Virtual for getting number of available slots
 eventSchema.virtual('availableSlotCount').get(function() {
-  return this.timeSlots.filter(slot => !slot.isTaken).length;
+  return (this.timeSlots || []).filter(slot => !slot.isTaken).length;
 });
 
 // Set virtuals to be included in JSON output

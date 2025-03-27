@@ -2,9 +2,30 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const { Event } = require('../models/Event');
 const auth = require('../middleware/auth');
+
+// @route   GET /api/users/model-test
+// @desc    Check model references
+// @access  Private
+router.get('/model-test', auth, async (req, res) => {
+  try {
+    // Get the models from mongoose
+    const models = mongoose.modelNames();
+    console.log('📦 Available Mongoose models:', models);
+    
+    // Try to get a direct reference to the Event model
+    const EventModel = mongoose.model('Event');
+    console.log('🍟 Event model exists:', !!EventModel);
+    
+    res.json({ models, eventModelExists: !!EventModel });
+  } catch (err) {
+    console.error('🔥 Error in model-test route:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
 
 // @route   POST /api/users/register
 // @desc    Register a new user
@@ -97,8 +118,15 @@ router.post('/login', async (req, res) => {
 // @access  Private
 router.get('/me', auth, async (req, res) => {
   try {
+    console.log('🔎 User ID being searched:', req.user.id);
+    
     const user = await User.findById(req.user.id)
       .select('-password')
+      .populate({
+        path: 'eventsHosting',
+        model: 'Event',
+        select: 'name venue date image attendeeCount'
+      })
       .populate({
         path: 'eventsAttending',
         select: 'name venue date image'
@@ -110,20 +138,47 @@ router.get('/me', auth, async (req, res) => {
       .populate({
         path: 'performanceSlots.slot',
         select: 'startTime endTime order'
-      })
-      .populate({
-        path: 'eventsHosting',
-        select: 'name venue date image attendeeCount'
       });
-
+    
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
+    
+    // Make defensive copies to ensure there are arrays, not null/undefined
+    user.eventsHosting = user.eventsHosting || [];
+    user.performanceSlots = user.performanceSlots || [];
+    user.eventsAttending = user.eventsAttending || [];
+    
+    console.log('✅ FINAL populated user:');
+    console.log('- eventsHosting:', JSON.stringify(user.eventsHosting, null, 2));
+    console.log('- eventsAttending:', JSON.stringify(user.eventsAttending, null, 2));
+    
+    const finalResponse = user.toObject();
+    res.json(finalResponse);
+  } catch (err) {
+    console.error('🔥 Error in /me route:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
+// @route   GET /api/users/me/test-populate
+// @desc    Test route to verify population works
+// @access  Private
+router.get('/me/test-populate', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .select('-password')
+      .populate({
+        path: 'eventsHosting',
+        model: 'Event',
+        select: 'name'
+      });
+    console.log('🎯 Test Populated user:', user);
+    console.log('🔎 eventsHosting value:', user.eventsHosting);
     res.json(user);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error('🔥 Error in test-populate route:', err);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
