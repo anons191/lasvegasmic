@@ -119,8 +119,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', auth, async (req, res) => {
   try {
     console.log('🔎 User ID being searched:', req.user.id);
-    
-    const user = await User.findById(req.user.id)
+    let user = await User.findById(req.user.id)
       .select('-password')
       .populate({
         path: 'eventsHosting',
@@ -133,28 +132,29 @@ router.get('/me', auth, async (req, res) => {
       })
       .populate({
         path: 'performanceSlots.event',
-        select: 'name venue date image'
-      })
-      .populate({
-        path: 'performanceSlots.slot',
-        select: 'startTime endTime order'
+        select: 'name venue date image timeSlots'
       });
-    
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
-    // Make defensive copies to ensure there are arrays, not null/undefined
-    user.eventsHosting = user.eventsHosting || [];
-    user.performanceSlots = user.performanceSlots || [];
-    user.eventsAttending = user.eventsAttending || [];
-    
+    user = user.toObject(); // convert to plain object for modification
+    // Manually populate `slot` from embedded event.timeSlots
+    if (Array.isArray(user.performanceSlots)) {
+      user.performanceSlots = user.performanceSlots.map(slotItem => {
+        const { event, slot } = slotItem;
+        const matchingSlot =
+          event?.timeSlots?.find(ts => ts._id.toString() === slot?.toString()) || null;
+        return {
+          ...slotItem,
+          slot: matchingSlot,
+        };
+      });
+    }
     console.log('✅ FINAL populated user:');
     console.log('- eventsHosting:', JSON.stringify(user.eventsHosting, null, 2));
     console.log('- eventsAttending:', JSON.stringify(user.eventsAttending, null, 2));
-    
-    const finalResponse = user.toObject();
-    res.json(finalResponse);
+    console.log('- performanceSlots:', JSON.stringify(user.performanceSlots, null, 2));
+    res.json(user);
   } catch (err) {
     console.error('🔥 Error in /me route:', err);
     res.status(500).json({ message: 'Server error' });
