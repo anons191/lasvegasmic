@@ -1,7 +1,13 @@
+// Load environment variables at the very top
+require('dotenv').config();
+
+// Debug logs for email credentials
+console.log('EMAIL_USERNAME:', process.env.EMAIL_USERNAME);
+console.log('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? 'Loaded' : 'Not Loaded');
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const path = require('path');
 const multer = require('multer');
 const crypto = require('crypto');
@@ -12,8 +18,6 @@ const { Readable } = require('stream');
 const userRoutes = require('./routes/users');
 const eventRoutes = require('./routes/events');
 const notificationRoutes = require('./routes/notifications');
-
-dotenv.config(); // Load environment variables
 
 const app = express();
 
